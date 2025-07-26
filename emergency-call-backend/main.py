@@ -576,32 +576,40 @@ def generate_ai_recommendations(transcript: str, summary: List[str] = None) -> L
             context += f"\n\nSummary Points: {', '.join(summary)}"
         
         prompt = f"""
-Based on this emergency call transcript, generate 3-5 specific, actionable recommendations for emergency responders.
+Based on this emergency call transcript, generate 3-5 specific recommendations for what information should be ADDED to the situation summary.
 
 {context}
 
+Each recommendation should suggest specific details, facts, or observations from the audio that should be included in the written situation summary to help emergency responders understand the scene better.
+
 For each recommendation, provide:
-1. Type: 'advice', 'warning', or 'protocol'
-2. Priority: 'high', 'medium', or 'low'
-3. Title: Brief descriptive title
-4. Content: Detailed actionable recommendation
-5. Confidence: 1-100 based on how certain you are
+1. Type: 'advice' (what to add), 'warning' (critical info missing), or 'protocol' (standard info needed)
+2. Priority: 'high' (critical details), 'medium' (important context), or 'low' (helpful details)
+3. Title: What type of information to add (e.g. "Add Vehicle Details", "Include Injury Status")
+4. Content: Specific text or information that should be added to the summary
+5. Confidence: 1-100 based on how clearly this info is mentioned in the audio
 
 Focus on:
-- Immediate safety concerns
-- Resource deployment
-- Medical priorities
-- Scene management
-- Communication protocols
+- Specific details mentioned in the audio that aren't in the current summary
+- Missing critical information that should be documented
+- Location specifics, victim conditions, hazards, timeline details
+- Information that would help dispatchers and responders
 
 Format as JSON array with this structure:
 [
   {{
+    "type": "advice",
+    "priority": "high", 
+    "title": "Add Victim Count Details",
+    "content": "Include that there are 2 occupants trapped - one responsive, one unresponsive. This helps medical teams prepare appropriate resources.",
+    "confidence": 95
+  }},
+  {{
     "type": "warning",
     "priority": "high", 
-    "title": "Vehicle Fire Risk",
-    "content": "Smoke from engine indicates potential fire hazard. Fire department should approach with foam equipment ready.",
-    "confidence": 92
+    "title": "Document Fire Hazard",
+    "content": "Add 'Engine compartment showing smoke - potential fire risk' to alert fire department of immediate hazard.",
+    "confidence": 88
   }}
 ]
 

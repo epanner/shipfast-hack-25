@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Brain, Users, Truck, Shield, AlertTriangle, CheckCircle, Edit2, Save, X, Sparkles } from "lucide-react";
+import { Brain, Users, Truck, Shield, AlertTriangle, CheckCircle, Edit2, Save, X, Sparkles, FileText } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -60,15 +60,22 @@ export const AIAssessment = ({ assessment, suggestions, aiRecommendations, loadi
   };
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
-    const newContent = ` ${suggestion.content}`;
+    // Extract the specific information to add from the suggestion content
+    const additionText = suggestion.content.includes('Add ') || suggestion.content.includes('Include ') 
+      ? suggestion.content 
+      : `Additional detail: ${suggestion.content}`;
+    
+    const newContent = `\n\n📝 ${suggestion.title}: ${additionText}`;
+    
     if (isEditingSummary) {
       setEditedSummary(prev => `${prev}${newContent}`);
     } else {
       setSituationSummary(prev => `${prev}${newContent}`);
     }
+    
     toast({
-      description: "Suggestion added to situation summary",
-      duration: 2000,
+      description: `Added "${suggestion.title}" to situation summary`,
+      duration: 3000,
     });
   };
 
@@ -162,12 +169,12 @@ export const AIAssessment = ({ assessment, suggestions, aiRecommendations, loadi
           <div>
             <div className="flex items-center gap-3 mb-3">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h4 className="font-semibold text-base text-foreground">AI Recommendations from Audio</h4>
+              <h4 className="font-semibold text-base text-foreground">Suggested Additions to Summary</h4>
               {loadingRecommendations ? (
-                <div className="ml-auto text-xs text-muted-foreground">Loading...</div>
+                <div className="ml-auto text-xs text-muted-foreground">Analyzing audio...</div>
               ) : (
                 <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary border-primary/30 text-xs">
-                  {aiRecommendations?.length || 0} available
+                  {aiRecommendations?.length || 0} suggestions
                 </Badge>
               )}
             </div>
@@ -197,6 +204,7 @@ export const AIAssessment = ({ assessment, suggestions, aiRecommendations, loadi
                         >
                           {recommendation.priority}
                         </Badge>
+                        <FileText className="w-4 h-4 text-muted-foreground" />
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">{recommendation.content}</p>
                       <div className="flex items-center justify-between mt-2">
