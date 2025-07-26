@@ -265,7 +265,7 @@ export const EmergencyDashboard = () => {
           </div>
 
           {/* Right Column - AI Assessment with Suggestions */}
-          <div className="lg:col-span-2 h-fit">
+          <div className="lg:col-span-2 min-h-0 max-h-screen">
             <AIAssessment assessment={assessment} suggestions={suggestions} />
           </div>
         </div>
