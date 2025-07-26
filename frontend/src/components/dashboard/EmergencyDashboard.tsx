@@ -29,7 +29,7 @@ interface Suggestion {
 
 interface Question {
   id: string;
-  category: 'location' | 'medical' | 'safety' | 'details';
+  category: 'location' | 'medical' | 'safety' | 'details' | 'reassurance';
   question: string;
   priority: number;
   reasoning: string;
@@ -72,6 +72,10 @@ export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps)
   // AI recommendations state
   const [aiRecommendations, setAiRecommendations] = useState<Suggestion[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
+  // Agent communication suggestions state
+  const [agentSuggestions, setAgentSuggestions] = useState<Question[]>([]);
+  const [loadingAgentSuggestions, setLoadingAgentSuggestions] = useState(false);
 
   // Initialize messages with audio transcript if available
   const [messages, setMessages] = useState<TranscriptMessage[]>(() => {
@@ -184,6 +188,7 @@ export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps)
   useEffect(() => {
     if (initialCallData?.transcript && initialCallData?.summary) {
       fetchAIRecommendations(initialCallData.transcript, initialCallData.summary);
+      fetchAgentSuggestions(initialCallData.transcript, initialCallData.summary);
     }
   }, [initialCallData]);
 
@@ -236,6 +241,56 @@ export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps)
       ]);
     } finally {
       setLoadingRecommendations(false);
+    }
+  };
+
+  const fetchAgentSuggestions = async (transcript: string, summary: string[]) => {
+    setLoadingAgentSuggestions(true);
+    
+    try {
+      const response = await fetch('http://localhost:8000/generate-agent-suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transcript: transcript,
+          summary: summary,
+          target_language: 'english'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Convert backend suggestions to frontend Question format
+      const formattedSuggestions: Question[] = result.suggestions.map((suggestion: any) => ({
+        id: suggestion.id,
+        category: suggestion.category as 'location' | 'medical' | 'safety' | 'details' | 'reassurance',
+        question: suggestion.suggestion, // Backend uses 'suggestion' field
+        priority: suggestion.priority,
+        reasoning: suggestion.reasoning
+      }));
+      
+      setAgentSuggestions(formattedSuggestions);
+      
+    } catch (error) {
+      console.error('Error fetching agent suggestions:', error);
+      // Set fallback suggestions
+      setAgentSuggestions([
+        {
+          id: 'fallback-1',
+          category: 'safety',
+          question: 'Is the caller in a safe location?',
+          priority: 10,
+          reasoning: 'Caller safety is priority with potential vehicle fire'
+        }
+      ]);
+    } finally {
+      setLoadingAgentSuggestions(false);
     }
   };
 
@@ -347,7 +402,7 @@ export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps)
               />
             </div>
             <div className="flex-1 min-h-0">
-              <QuestionSuggestions questions={questions} />
+              <QuestionSuggestions questions={agentSuggestions} />
             </div>
           </div>
 

@@ -2,12 +2,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { HelpCircle, Check, Star } from "lucide-react";
+import { MessageSquare, Check, Star, Phone } from "lucide-react";
 import { useState } from "react";
 
 interface Question {
   id: string;
-  category: 'location' | 'medical' | 'safety' | 'details';
+  category: 'location' | 'medical' | 'safety' | 'details' | 'reassurance';
   question: string;
   priority: number;
   reasoning: string;
@@ -18,10 +18,10 @@ interface QuestionSuggestionsProps {
 }
 
 export const QuestionSuggestions = ({ questions }: QuestionSuggestionsProps) => {
-  const [askedQuestions, setAskedQuestions] = useState<Set<string>>(new Set());
+  const [usedSuggestions, setUsedSuggestions] = useState<Set<string>>(new Set());
 
-  const handleMarkAsked = (questionId: string) => {
-    setAskedQuestions(prev => new Set([...prev, questionId]));
+  const handleMarkAsUsed = (questionId: string) => {
+    setUsedSuggestions(prev => new Set([...prev, questionId]));
   };
 
   const getCategoryColor = (category: string) => {
@@ -29,40 +29,41 @@ export const QuestionSuggestions = ({ questions }: QuestionSuggestionsProps) => 
       case 'location': return 'bg-emergency text-emergency-foreground';
       case 'medical': return 'bg-warning text-warning-foreground';
       case 'safety': return 'bg-success text-success-foreground';
+      case 'reassurance': return 'bg-primary text-primary-foreground';
       case 'details': return 'bg-info text-info-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
-  const unansweredQuestions = questions.filter(q => !askedQuestions.has(q.id)).sort((a, b) => b.priority - a.priority);
-  const answeredQuestions = questions.filter(q => askedQuestions.has(q.id)).sort((a, b) => b.priority - a.priority);
-  const sortedQuestions = [...unansweredQuestions, ...answeredQuestions];
+  const unusedSuggestions = questions.filter(q => !usedSuggestions.has(q.id)).sort((a, b) => b.priority - a.priority);
+  const usedSuggestionsFiltered = questions.filter(q => usedSuggestions.has(q.id)).sort((a, b) => b.priority - a.priority);
+  const sortedQuestions = [...unusedSuggestions, ...usedSuggestionsFiltered];
 
   return (
     <Card className="p-6 bg-gradient-to-br from-card to-card/80 border-2 shadow-xl hover:shadow-2xl transition-all duration-300 animate-fade-in h-[calc(100vh-400px)] flex flex-col">
       <div className="flex items-center gap-3 mb-6">
-        <HelpCircle className="w-6 h-6 text-primary" />
-        <h3 className="font-bold text-lg text-foreground">Suggestions</h3>
+        <MessageSquare className="w-6 h-6 text-primary" />
+        <h3 className="font-bold text-lg text-foreground">What to Say to Caller</h3>
         <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary border-primary/30">
-          {questions.length} ready
+          {questions.length} suggestions
         </Badge>
       </div>
       
       <ScrollArea className="flex-1">
         <div className="space-y-3 pr-4">
           {sortedQuestions.map((question) => {
-            const isAsked = askedQuestions.has(question.id);
+            const isUsed = usedSuggestions.has(question.id);
             return (
               <div
                 key={question.id}
                 className={`border rounded-xl bg-gradient-to-r from-card to-card/80 transition-all duration-500 animate-fade-in ${
-                  isAsked 
+                  isUsed 
                     ? 'bg-success/10 border-success/30 p-2' 
                     : 'p-4 hover:shadow-lg hover:scale-[1.02]'
                 }`}
               >
-              {isAsked ? (
-                // Collapsed view for answered questions
+              {isUsed ? (
+                // Collapsed view for used suggestions
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 flex-1">
                     <Button
@@ -82,7 +83,7 @@ export const QuestionSuggestions = ({ questions }: QuestionSuggestionsProps) => 
                   </Badge>
                 </div>
               ) : (
-                // Full view for unanswered questions
+                // Full view for unused suggestions
                 <>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -98,7 +99,7 @@ export const QuestionSuggestions = ({ questions }: QuestionSuggestionsProps) => 
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleMarkAsked(question.id)}
+                      onClick={() => handleMarkAsUsed(question.id)}
                       className="h-8 w-8 p-0 hover:bg-success/20 hover:text-success"
                     >
                       <Check className="w-4 h-4" />

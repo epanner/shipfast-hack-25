@@ -679,6 +679,124 @@ async def generate_recommendations(request: RecommendationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating recommendations: {str(e)}")
 
+# -------- Agent Communication Suggestions Endpoint --------
+
+class AgentSuggestion(BaseModel):
+    id: str
+    category: str  # 'safety', 'medical', 'location', 'reassurance'
+    suggestion: str  # What the agent should say
+    priority: int  # 1-10 priority
+    reasoning: str  # Why this is important to say
+
+class AgentSuggestionsResponse(BaseModel):
+    suggestions: List[AgentSuggestion]
+    message: str
+
+def generate_agent_communication_suggestions(transcript: str, summary: List[str] = None) -> List[dict]:
+    """Generate suggestions for what the agent should say to the caller"""
+    try:
+        # Combine transcript and summary for context
+        context = f"Emergency Call Transcript: {transcript}"
+        if summary:
+            context += f"\n\nSummary Points: {', '.join(summary)}"
+        
+        prompt = f"""
+Based on this emergency call transcript, generate 4-6 specific suggestions for what the human emergency agent should SAY to the caller to help them and gather more information.
+
+{context}
+
+Each suggestion should be something the agent can directly say to the caller. Focus on:
+- Reassuring and calming the caller
+- Gathering critical missing information
+- Providing safety instructions
+- Keeping the caller engaged and helpful
+
+For each suggestion, provide:
+1. Category: 'safety' (safety instructions), 'medical' (medical guidance), 'location' (location details), 'reassurance' (calming/support)
+2. Suggestion: Exact words the agent should say to the caller
+3. Priority: 1-10 (10 = most urgent to say)
+4. Reasoning: Why this is important to communicate
+
+Format as JSON array with this structure:
+[
+  {{
+    "category": "reassurance",
+    "suggestion": "I understand this is very frightening. You're doing great by calling us. Help is on the way.",
+    "priority": 9,
+    "reasoning": "Caller sounds panicked and needs immediate reassurance to stay calm and cooperative"
+  }},
+  {{
+    "category": "safety", 
+    "suggestion": "Please stay at a safe distance from the vehicle due to the smoke. Do not attempt to move the victims unless there's immediate danger.",
+    "priority": 10,
+    "reasoning": "Critical safety instruction to prevent caller from becoming another victim"
+  }}
+]
+
+Provide only the JSON array, no other text.
+"""
+
+        response = claude.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        # Parse Claude's response
+        suggestions_text = response.content[0].text.strip()
+        
+        # Remove any markdown formatting if present
+        if suggestions_text.startswith('```json'):
+            suggestions_text = suggestions_text.replace('```json', '').replace('```', '').strip()
+        
+        suggestions = json.loads(suggestions_text)
+        
+        # Add unique IDs
+        for i, suggestion in enumerate(suggestions):
+            suggestion['id'] = f"agent-comm-{i+1}"
+            
+        return suggestions
+        
+    except Exception as e:
+        print(f"Error generating agent communication suggestions: {e}")
+        # Return fallback suggestions
+        return [
+            {
+                "id": "agent-comm-1",
+                "category": "reassurance",
+                "suggestion": "I understand this is a difficult situation. You're doing the right thing by calling us, and help is on the way.",
+                "priority": 9,
+                "reasoning": "Provides immediate emotional support and reassurance"
+            },
+            {
+                "id": "agent-comm-2",
+                "category": "safety",
+                "suggestion": "Please make sure you're in a safe location away from any immediate danger.",
+                "priority": 10,
+                "reasoning": "Ensures caller safety is the first priority"
+            }
+        ]
+
+@app.post("/generate-agent-suggestions", response_model=AgentSuggestionsResponse)
+async def generate_agent_suggestions(request: RecommendationRequest):
+    """Generate suggestions for what the agent should say to the caller"""
+    
+    try:
+        suggestions = generate_agent_communication_suggestions(
+            transcript=request.transcript,
+            summary=request.summary
+        )
+        
+        return AgentSuggestionsResponse(
+            suggestions=[
+                AgentSuggestion(**suggestion) for suggestion in suggestions
+            ],
+            message="Agent communication suggestions generated successfully"
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating agent suggestions: {str(e)}")
+
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------

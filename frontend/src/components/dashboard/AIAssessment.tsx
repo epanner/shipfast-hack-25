@@ -32,9 +32,10 @@ interface AIAssessmentProps {
   suggestions: Suggestion[];
   aiRecommendations?: Suggestion[];
   loadingRecommendations?: boolean;
+  loadingAgentSuggestions?: boolean;
 }
 
-export const AIAssessment = ({ assessment, suggestions, aiRecommendations, loadingRecommendations }: AIAssessmentProps) => {
+export const AIAssessment = ({ assessment, suggestions, aiRecommendations, loadingRecommendations, loadingAgentSuggestions }: AIAssessmentProps) => {
   const [selectedDepartments, setSelectedDepartments] = useState(assessment.departments);
   const [situationSummary, setSituationSummary] = useState(assessment.summary);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
