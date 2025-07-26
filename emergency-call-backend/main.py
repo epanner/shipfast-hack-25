@@ -22,13 +22,27 @@ from models import ChatSessionGuide
 from models import ChatMessage
 
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base, UserCaller, UserAgent, ChatSession
 from pydantic import BaseModel
 import random
+import os
+import subprocess
+import tempfile
+from pathlib import Path
 
+# Import transcription functions from the main.py file
+import sys
+sys.path.append('..')
+try:
+    from main import process_audio_file
+except ImportError:
+    # Fallback if import fails
+    def process_audio_file(audio_path: str):
+        return {"error": "Transcription service not available"}
 
 # -------- Database Setup --------
 DATABASE_URL = "sqlite:///./emergency_call.db"
@@ -317,5 +331,114 @@ def seed_agent():
 
 # ----------------------------------------------------------------------------
 
+# -------- Audio Processing Schema --------
+class AudioProcessingResponse(BaseModel):
+    session_id: int
+    transcript: str
+    summary: str
+    translation: str
+    confidence_score: float
 
+# -------- Route: Process Audio File --------
+@app.post("/process-audio/{session_id}", response_model=AudioProcessingResponse)
+def process_audio(
+    session_id: int,
+    audio_file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Process an audio file for an existing session:
+    1. Save the uploaded audio file
+    2. Transcribe using Whisper
+    3. Translate and summarize using Claude
+    4. Store results in database
+    5. Return processed results
+    """
+    
+    # Verify session exists
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    try:
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
+            content = audio_file.file.read()
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+        
+        # Process the audio file
+        result = process_audio_file(temp_file_path)
+        
+        # Clean up temporary file
+        os.unlink(temp_file_path)
+        
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        
+        # Extract results (adjust based on your main.py output format)
+        transcript = result.get("transcript", "")
+        summary = result.get("summary", "")
+        translation = result.get("translation", "")
+        
+        # Store transcript as a message in the database
+        if transcript:
+            transcript_message = ChatMessage(
+                session_id=session_id,
+                sender_type="caller",
+                message=transcript,
+                confidence_score=0.9,
+                unresolved=False
+            )
+            db.add(transcript_message)
+        
+        # Store summary as an agent message
+        if summary:
+            summary_message = ChatMessage(
+                session_id=session_id,
+                sender_type="agent",
+                message=f"AI Summary: {summary}",
+                confidence_score=0.95,
+                unresolved=False
+            )
+            db.add(summary_message)
+        
+        # Store translation if different from original
+        if translation and translation != transcript:
+            translation_message = ChatMessage(
+                session_id=session_id,
+                sender_type="agent",
+                message=f"Translation: {translation}",
+                confidence_score=0.9,
+                unresolved=False
+            )
+            db.add(translation_message)
+        
+        db.commit()
+        
+        return AudioProcessingResponse(
+            session_id=session_id,
+            transcript=transcript,
+            summary=summary,
+            translation=translation,
+            confidence_score=0.9
+        )
+        
+    except Exception as e:
+        # Clean up temp file if it exists
+        if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+        
+        raise HTTPException(status_code=500, detail=f"Audio processing failed: {str(e)}")
 
+# -------- Route: Upload Audio File --------
+@app.post("/upload-audio/{session_id}")
+def upload_audio(
+    session_id: int,
+    audio_file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Simple audio upload endpoint that processes and stores results
+    """
+    return process_audio(session_id, audio_file, db)

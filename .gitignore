@@ -7,5 +7,5 @@ package-lock.json
 # Editor
 .idea
 .vscode
-
+.env
 # Build

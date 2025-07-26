@@ -115,19 +115,54 @@ def translate_with_claude(
     return translated_lines
 
 # === STEP 3: Main pipeline function ===
-def process_audio_file(audio_path: str) -> list:
+def process_audio_file(audio_path: str):
+    """
+    Process audio file and return structured results for backend integration
+    """
     print("🔊 Transcribing audio...")
     transcript = transcribe_audio(audio_path)
-
+    
     print("🧠 Sending transcript to Claude for summarization...")
     summary = summarize_text_with_claude(transcript)
-
-    return summary
+    
+    # Extract key points and translation from summary
+    lines = '\n'.join(summary).split('\n')
+    key_points = []
+    translation = ""
+    
+    capture_points = False
+    capture_translation = False
+    
+    for line in lines:
+        line = line.strip()
+        if "Key points:" in line:
+            capture_points = True
+            continue
+        elif "Translated to" in line:
+            capture_points = False
+            capture_translation = True
+            continue
+        elif capture_points and line.startswith('-'):
+            key_points.append(line[1:].strip())
+        elif capture_translation and line.startswith('-'):
+            if not translation:
+                translation = line[1:].strip()
+    
+    # Create structured response
+    result = {
+        "transcript": transcript,
+        "summary": "; ".join(key_points) if key_points else '\n'.join(summary),
+        "translation": translation,
+        "full_summary": '\n'.join(summary),
+        "status": "success"
+    }
+    
+    return result
 
 if __name__ == "__main__":
     audio_file = "test.mp3"  # Path to your .mp3 or .wav file
     summary = process_audio_file(audio_file)
 
     print("\n📋 Final Summary:")
-    for line in summary:
-        print("-", line)
+    for key, value in summary.items():
+        print(f"{key}: {value}")
