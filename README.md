@@ -2,8 +2,6 @@
 
 `sosAI` enhances emergency call handling by leveraging AI to **transcribe, analyze, and assist dispatchers in real time**. It provides live translations, AI-generated response suggestions, and smart question prompts—helping emergency services respond faster and more accurately.
 
----
-
 ## ✨ Key Features
 
 ✅ **Live Call Transcription**  
@@ -30,15 +28,11 @@
 - AI assists in dispatching relevant services more precisely  
 - Reduces decision-making time for operators  
 
----
-
 ## 🛠️ Tech Stack
 
 - **[Anthropic Claude API](https://www.anthropic.com/)** → AI reasoning, decision support & protocol generation  
 - **[OpenAI Whisper](https://openai.com/research/whisper)** → High-accuracy voice recognition & transcription  
 - **[Lovable](https://lovable.dev/)** → Rapid frontend generation (TypeScript)
-
----
 
 ## 🚀 How It Works
 
@@ -46,8 +40,6 @@
 2. **AI Analysis** → Claude processes the transcript, detects critical info, suggests next steps.  
 3. **Smart UI** → The Lovable-generated frontend displays live transcription, AI suggestions, and key metadata (location, language, duration).  
 4. **Faster Dispatch** → Operator receives prioritized info & can request emergency services more accurately.
-
----
 
 ## 💻 Setup & Installation
 
