@@ -134,8 +134,8 @@ export const AgentDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 flex flex-col">
+      <div className="w-full flex-1 flex flex-col">
         <header className="mb-6">
           <div className="flex items-center justify-between bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 backdrop-blur-sm border rounded-xl p-6 shadow-lg">
             <div>
