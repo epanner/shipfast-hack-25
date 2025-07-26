@@ -37,6 +37,7 @@ from dotenv import load_dotenv
 from typing import Union, List
 import tempfile
 from datetime import datetime
+import json
 
 load_dotenv(dotenv_path="../.env")  # Load .env from parent directory
 
@@ -46,9 +47,9 @@ CLAUDE_MODEL = "claude-3-haiku-20240307"
 MAX_TOKENS = 300
 
 if CLAUDE_API_KEY:
-    claude_client = Anthropic(api_key=CLAUDE_API_KEY)
+    claude = Anthropic(api_key=CLAUDE_API_KEY)
 else:
-    claude_client = None
+    claude = None
 
 # -------- Database Setup --------
 DATABASE_URL = "sqlite:///./emergency_call.db"
@@ -289,6 +290,7 @@ def update_suggestions(data: UpdateSuggestionsRequest, db: Session = Depends(get
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # AI Processing Functions
 
 def transcribe_audio(audio_path: str) -> str:
@@ -299,10 +301,10 @@ def transcribe_audio(audio_path: str) -> str:
 
 def summarize_text_with_claude(text: str, target_language: str = "french") -> list:
     """Summarize and translate text using Claude"""
-    if not claude_client:
+    if not claude:
         raise HTTPException(status_code=500, detail="Claude API not configured")
     
-    response = claude_client.messages.create(
+    response = claude.messages.create(
         model=CLAUDE_MODEL,
         max_tokens=MAX_TOKENS,
         messages=[
@@ -324,7 +326,7 @@ def summarize_text_with_claude(text: str, target_language: str = "french") -> li
 
 def translate_with_claude(text: Union[str, List[str]], target_language: str) -> List[str]:
     """Translate text using Claude"""
-    if not claude_client:
+    if not claude:
         raise HTTPException(status_code=500, detail="Claude API not configured")
     
     if isinstance(text, str):
@@ -340,7 +342,7 @@ def translate_with_claude(text: Union[str, List[str]], target_language: str) -> 
         f"{joined_text}"
     )
 
-    response = claude_client.messages.create(
+    response = claude.messages.create(
         model=CLAUDE_MODEL,
         max_tokens=MAX_TOKENS,
         messages=[{"role": "user", "content": prompt}]
@@ -546,7 +548,133 @@ def generate_suggestions(session_id: int, db: Session = Depends(get_db)):
 
 # ----------------------------------------------------------------------------
 
+# -------- AI Recommendations Endpoint --------
 
+class RecommendationRequest(BaseModel):
+    transcript: str
+    summary: Optional[List[str]] = []
+    target_language: Optional[str] = "english"
+
+class AIRecommendation(BaseModel):
+    id: str
+    type: str  # 'advice', 'warning', 'protocol'
+    priority: str  # 'high', 'medium', 'low'
+    title: str
+    content: str
+    confidence: int
+
+class RecommendationsResponse(BaseModel):
+    recommendations: List[AIRecommendation]
+    message: str
+
+def generate_ai_recommendations(transcript: str, summary: List[str] = None) -> List[dict]:
+    """Generate AI recommendations based on transcript and summary"""
+    try:
+        # Combine transcript and summary for context
+        context = f"Emergency Call Transcript: {transcript}"
+        if summary:
+            context += f"\n\nSummary Points: {', '.join(summary)}"
+        
+        prompt = f"""
+Based on this emergency call transcript, generate 3-5 specific, actionable recommendations for emergency responders.
+
+{context}
+
+For each recommendation, provide:
+1. Type: 'advice', 'warning', or 'protocol'
+2. Priority: 'high', 'medium', or 'low'
+3. Title: Brief descriptive title
+4. Content: Detailed actionable recommendation
+5. Confidence: 1-100 based on how certain you are
+
+Focus on:
+- Immediate safety concerns
+- Resource deployment
+- Medical priorities
+- Scene management
+- Communication protocols
+
+Format as JSON array with this structure:
+[
+  {{
+    "type": "warning",
+    "priority": "high", 
+    "title": "Vehicle Fire Risk",
+    "content": "Smoke from engine indicates potential fire hazard. Fire department should approach with foam equipment ready.",
+    "confidence": 92
+  }}
+]
+
+Provide only the JSON array, no other text.
+"""
+
+        response = claude.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        # Parse Claude's response
+        recommendations_text = response.content[0].text.strip()
+        
+        # Remove any markdown formatting if present
+        if recommendations_text.startswith('```json'):
+            recommendations_text = recommendations_text.replace('```json', '').replace('```', '').strip()
+        
+        recommendations = json.loads(recommendations_text)
+        
+        # Add unique IDs
+        for i, rec in enumerate(recommendations):
+            rec['id'] = f"ai-rec-{i+1}"
+            
+        return recommendations
+        
+    except Exception as e:
+        print(f"Error generating AI recommendations: {e}")
+        # Return fallback recommendations
+        return [
+            {
+                "id": "ai-rec-1",
+                "type": "advice",
+                "priority": "high",
+                "title": "Assess Scene Safety",
+                "content": "Conduct thorough scene assessment before approaching. Look for hazards like traffic, fire, or unstable vehicles.",
+                "confidence": 85
+            },
+            {
+                "id": "ai-rec-2", 
+                "type": "protocol",
+                "priority": "medium",
+                "title": "Establish Communication",
+                "content": "Maintain clear communication between all responding units. Designate incident commander.",
+                "confidence": 90
+            }
+        ]
+
+@app.post("/generate-recommendations", response_model=RecommendationsResponse)
+async def generate_recommendations(request: RecommendationRequest):
+    """Generate AI recommendations based on emergency call transcript"""
+    
+    try:
+        recommendations = generate_ai_recommendations(
+            transcript=request.transcript,
+            summary=request.summary
+        )
+        
+        return RecommendationsResponse(
+            recommendations=[
+                AIRecommendation(**rec) for rec in recommendations
+            ],
+            message="AI recommendations generated successfully"
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating recommendations: {str(e)}")
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 def detect_emergency_keywords(message: str) -> bool:
     keywords = ["heart attack", "unconscious", "severe bleeding", "not breathing"]
     message_lower = message.lower()

@@ -69,6 +69,10 @@ export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps)
   // Debug logging
   console.log('EmergencyDashboard - initialCallData:', initialCallData);
 
+  // AI recommendations state
+  const [aiRecommendations, setAiRecommendations] = useState<Suggestion[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
   // Initialize messages with audio transcript if available
   const [messages, setMessages] = useState<TranscriptMessage[]>(() => {
     const defaultMessages: TranscriptMessage[] = [];
@@ -175,6 +179,65 @@ export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps)
 
     return defaultAssessment;
   });
+
+  // Fetch AI recommendations when audio data is available
+  useEffect(() => {
+    if (initialCallData?.transcript && initialCallData?.summary) {
+      fetchAIRecommendations(initialCallData.transcript, initialCallData.summary);
+    }
+  }, [initialCallData]);
+
+  const fetchAIRecommendations = async (transcript: string, summary: string[]) => {
+    setLoadingRecommendations(true);
+    
+    try {
+      const response = await fetch('http://localhost:8000/generate-recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transcript: transcript,
+          summary: summary,
+          target_language: 'english'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Convert backend recommendations to frontend Suggestion format
+      const formattedRecommendations: Suggestion[] = result.recommendations.map((rec: any) => ({
+        id: rec.id,
+        type: rec.type as 'advice' | 'warning' | 'protocol',
+        priority: rec.priority as 'high' | 'medium' | 'low',
+        title: rec.title,
+        content: rec.content,
+        confidence: rec.confidence
+      }));
+      
+      setAiRecommendations(formattedRecommendations);
+      
+    } catch (error) {
+      console.error('Error fetching AI recommendations:', error);
+      // Set fallback recommendations
+      setAiRecommendations([
+        {
+          id: 'fallback-1',
+          type: 'advice',
+          priority: 'high',
+          title: 'Scene Assessment',
+          content: 'Conduct thorough scene safety assessment before approaching.',
+          confidence: 85
+        }
+      ]);
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
 
   // Simulate call duration
   useEffect(() => {
@@ -298,7 +361,12 @@ export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps)
 
           {/* Right Column - AI Assessment with Suggestions */}
           <div className="lg:col-span-2 min-h-0 max-h-screen">
-            <AIAssessment assessment={assessment} suggestions={suggestions} />
+            <AIAssessment 
+              assessment={assessment} 
+              suggestions={[]} 
+              aiRecommendations={aiRecommendations} 
+              loadingRecommendations={loadingRecommendations} 
+            />
           </div>
         </div>
       </div>

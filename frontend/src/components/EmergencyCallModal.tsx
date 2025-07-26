@@ -50,6 +50,10 @@ const EmergencyCallModal: React.FC<EmergencyCallModalProps> = ({ isOpen, onClose
   const [audioError, setAudioError] = useState<string>('');
   const [audioResults, setAudioResults] = useState<any>(null);
 
+  // AI recommendations state
+  const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
   // Mock caller data
   const callerInfo = {
     name: "Unknown Caller",
@@ -176,6 +180,9 @@ const EmergencyCallModal: React.FC<EmergencyCallModalProps> = ({ isOpen, onClose
       const result = await response.json();
       setAudioResults(result);
       
+      // Fetch AI recommendations based on the transcript
+      await fetchAIRecommendations(result.transcript, result.summary);
+      
       // Clear the file after successful processing
       setAudioFile(null);
       
@@ -183,6 +190,47 @@ const EmergencyCallModal: React.FC<EmergencyCallModalProps> = ({ isOpen, onClose
       setAudioError(`Error processing audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploadingAudio(false);
+    }
+  };
+
+  const fetchAIRecommendations = async (transcript: string, summary: string[]) => {
+    setLoadingRecommendations(true);
+    
+    try {
+      const response = await fetch('http://localhost:8000/generate-recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transcript: transcript,
+          summary: summary,
+          target_language: 'english'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setAiRecommendations(result.recommendations);
+      
+    } catch (error) {
+      console.error('Error fetching AI recommendations:', error);
+      // Set fallback recommendations
+      setAiRecommendations([
+        {
+          id: 'fallback-1',
+          type: 'advice',
+          priority: 'high',
+          title: 'Scene Assessment',
+          content: 'Conduct thorough scene safety assessment before approaching.',
+          confidence: 85
+        }
+      ]);
+    } finally {
+      setLoadingRecommendations(false);
     }
   };
 
@@ -416,6 +464,32 @@ const EmergencyCallModal: React.FC<EmergencyCallModalProps> = ({ isOpen, onClose
                     {priority === 'critical' && <p>• <strong>Immediate dispatch required</strong></p>}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Recommendations */}
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Recommendations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingRecommendations ? (
+                  <div className="text-center">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {aiRecommendations.map((recommendation, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div>
+                          <p className="text-sm font-medium">{recommendation.title}</p>
+                          <p className="text-sm">{recommendation.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

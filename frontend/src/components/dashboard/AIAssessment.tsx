@@ -30,9 +30,11 @@ interface Assessment {
 interface AIAssessmentProps {
   assessment: Assessment;
   suggestions: Suggestion[];
+  aiRecommendations?: Suggestion[];
+  loadingRecommendations?: boolean;
 }
 
-export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => {
+export const AIAssessment = ({ assessment, suggestions, aiRecommendations, loadingRecommendations }: AIAssessmentProps) => {
   const [selectedDepartments, setSelectedDepartments] = useState(assessment.departments);
   const [situationSummary, setSituationSummary] = useState(assessment.summary);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
@@ -160,41 +162,45 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
           <div>
             <div className="flex items-center gap-3 mb-3">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h4 className="font-semibold text-base text-foreground">AI Suggestions</h4>
-              <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary border-primary/30 text-xs">
-                {suggestions.length} available
-              </Badge>
+              <h4 className="font-semibold text-base text-foreground">AI Recommendations from Audio</h4>
+              {loadingRecommendations ? (
+                <div className="ml-auto text-xs text-muted-foreground">Loading...</div>
+              ) : (
+                <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary border-primary/30 text-xs">
+                  {aiRecommendations?.length || 0} available
+                </Badge>
+              )}
             </div>
             <div className="h-48 overflow-y-scroll border rounded-lg">
               <div className="p-4 space-y-2">
-                {suggestions.map((suggestion) => (
+                {aiRecommendations?.map((recommendation) => (
                   <div
-                    key={suggestion.id}
-                    onClick={() => handleSuggestionClick(suggestion)}
+                    key={recommendation.id}
+                    onClick={() => handleSuggestionClick(recommendation)}
                     className="group p-3 border rounded-xl bg-gradient-to-r from-card to-card/90 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50 transition-all duration-300 cursor-pointer relative overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="relative">
                       <div className="flex items-center gap-2 mb-2">
                         <div className={`p-1.5 rounded-lg ${
-                          suggestion.priority === 'high' ? 'bg-emergency/20' :
-                          suggestion.priority === 'medium' ? 'bg-warning/20' : 'bg-info/20'
+                          recommendation.priority === 'high' ? 'bg-emergency/20' :
+                          recommendation.priority === 'medium' ? 'bg-warning/20' : 'bg-info/20'
                         }`}>
-                          <div className={`${getPriorityColor(suggestion.priority)}`}>
-                            {getTypeIcon(suggestion.type)}
+                          <div className={`${getPriorityColor(recommendation.priority)}`}>
+                            {getTypeIcon(recommendation.type)}
                           </div>
                         </div>
-                        <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{suggestion.title}</span>
+                        <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{recommendation.title}</span>
                         <Badge 
                           variant="outline" 
-                          className={`text-xs ml-auto ${getPriorityColor(suggestion.priority)} border-current`}
+                          className={`text-xs ml-auto ${getPriorityColor(recommendation.priority)} border-current`}
                         >
-                          {suggestion.priority}
+                          {recommendation.priority}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{suggestion.content}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{recommendation.content}</p>
                       <div className="flex items-center justify-between mt-2">
-                        <div className="text-xs text-muted-foreground">Confidence: {suggestion.confidence}%</div>
+                        <div className="text-xs text-muted-foreground">Confidence: {recommendation.confidence}%</div>
                         <div className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">Click to add →</div>
                       </div>
                     </div>
