@@ -1,7 +1,11 @@
 import { EmergencyDashboard } from "@/components/dashboard/EmergencyDashboard";
+import { useLocation } from "react-router-dom";
 
 const Call = () => {
-  return <EmergencyDashboard />;
+  const location = useLocation();
+  const callData = location.state?.callData;
+
+  return <EmergencyDashboard initialCallData={callData} />;
 };
 
 export default Call;

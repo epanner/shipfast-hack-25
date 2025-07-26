@@ -38,7 +38,7 @@ from typing import Union, List
 import tempfile
 from datetime import datetime
 
-load_dotenv()
+load_dotenv(dotenv_path="../.env")  # Load .env from parent directory
 
 # -------- AI Configuration --------
 CLAUDE_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -559,6 +559,3 @@ def detect_emergency_keywords(message: str) -> bool:
 
 
 # ----------------------------------------------------------------------------
-
-
-

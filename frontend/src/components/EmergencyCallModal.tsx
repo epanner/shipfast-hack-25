@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 import { 
   Phone, 
   PhoneCall, 
@@ -17,7 +18,10 @@ import {
   CheckCircle,
   XCircle,
   Volume2,
-  MessageSquare
+  MessageSquare,
+  Upload,
+  FileAudio,
+  Loader2
 } from 'lucide-react';
 
 interface EmergencyCallData {
@@ -39,6 +43,12 @@ const EmergencyCallModal: React.FC<EmergencyCallModalProps> = ({ isOpen, onClose
   const [emergencyType, setEmergencyType] = useState<string>('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
   const [dispatchedServices, setDispatchedServices] = useState<string[]>([]);
+  
+  // Audio upload states
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioError, setAudioError] = useState<string>('');
+  const [audioResults, setAudioResults] = useState<any>(null);
 
   // Mock caller data
   const callerInfo = {
@@ -111,6 +121,68 @@ const EmergencyCallModal: React.FC<EmergencyCallModalProps> = ({ isOpen, onClose
       case 'medium': return 'default';
       case 'low': return 'secondary';
       default: return 'default';
+    }
+  };
+
+  // Audio upload handlers
+  const handleAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    const audioExtensions = ['.mp3', '.wav', '.m4a', '.ogg', '.flac'];
+    const isAudioExtension = audioExtensions.includes(fileExtension);
+    const isAudioMimeType = file.type.startsWith('audio/') || file.type === '';
+    
+    if (!isAudioExtension && !isAudioMimeType) {
+      setAudioError('Invalid file type. Please select MP3, WAV, M4A, OGG, or FLAC');
+      setAudioFile(null);
+      return;
+    }
+
+    // Validate file size (50MB max)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setAudioError('File size must be less than 50MB');
+      setAudioFile(null);
+      return;
+    }
+
+    setAudioFile(file);
+    setAudioError('');
+  };
+
+  const processAudioFile = async () => {
+    if (!audioFile) return;
+
+    setUploadingAudio(true);
+    setAudioError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('audio_file', audioFile);
+      formData.append('target_language', callData?.target_language || 'french');
+
+      const response = await fetch('http://localhost:8000/process-audio', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setAudioResults(result);
+      
+      // Clear the file after successful processing
+      setAudioFile(null);
+      
+    } catch (error) {
+      setAudioError(`Error processing audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploadingAudio(false);
     }
   };
 
@@ -344,6 +416,93 @@ const EmergencyCallModal: React.FC<EmergencyCallModalProps> = ({ isOpen, onClose
                     {priority === 'critical' && <p>• <strong>Immediate dispatch required</strong></p>}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Audio Upload Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileAudio className="h-5 w-5" />
+                  Upload Audio Evidence
+                </CardTitle>
+                <CardDescription>Upload additional audio files during the call</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                    <div className="mt-2">
+                      <label htmlFor="emergency-audio-file" className="cursor-pointer">
+                        <span className="text-sm font-medium text-gray-900">
+                          {audioFile ? audioFile.name : 'Click to upload audio file'}
+                        </span>
+                        <span className="block text-xs text-gray-500 mt-1">
+                          MP3, WAV, M4A, OGG, FLAC up to 50MB
+                        </span>
+                      </label>
+                      <Input
+                        id="emergency-audio-file"
+                        type="file"
+                        accept=".mp3,.wav,.m4a,.ogg,.flac,audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/flac"
+                        onChange={handleAudioFileChange}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+                  
+                  {audioFile && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Selected: {audioFile.name} ({(audioFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                  
+                  {audioError && (
+                    <Alert className="mt-2">
+                      <XCircle className="h-4 w-4" />
+                      <AlertDescription className="text-red-600">
+                        {audioError}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+
+                <Button 
+                  onClick={processAudioFile} 
+                  disabled={!audioFile || uploadingAudio}
+                  className="w-full"
+                >
+                  {uploadingAudio ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing Audio...
+                    </>
+                  ) : (
+                    <>
+                      <FileAudio className="mr-2 h-4 w-4" />
+                      Process Audio File
+                    </>
+                  )}
+                </Button>
+
+                {audioResults && (
+                  <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <h4 className="font-medium text-green-800 mb-2">Audio Processing Results:</h4>
+                    <div className="text-sm space-y-1">
+                      <p><strong>Transcript:</strong> {audioResults.transcript}</p>
+                      {audioResults.summary && (
+                        <div>
+                          <strong>Summary:</strong>
+                          <ul className="list-disc list-inside ml-2">
+                            {audioResults.summary.map((point: string, index: number) => (
+                              <li key={index}>{point}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { 
   Phone, 
   PhoneCall, 
@@ -12,7 +13,10 @@ import {
   Power,
   PhoneIncoming,
   AlertTriangle,
-  Bot
+  Bot,
+  Upload,
+  FileAudio,
+  Loader2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -33,6 +37,13 @@ export const AgentDashboard = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [incomingCall, setIncomingCall] = useState<boolean>(false);
   const [waitingTime, setWaitingTime] = useState<number>(0);
+  
+  // Audio upload states
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioError, setAudioError] = useState<string>('');
+  const [audioResults, setAudioResults] = useState<any>(null);
+
   const navigate = useNavigate();
 
   const [previousCalls] = useState<CallRecord[]>([
@@ -92,7 +103,21 @@ export const AgentDashboard = () => {
   const handleAnswerCall = () => {
     setIncomingCall(false);
     setWaitingTime(0);
-    navigate('/call');
+    
+    // Navigate to call page with audio results if available
+    navigate('/call', {
+      state: {
+        callData: {
+          phoneNumber: '+1 (555) 123-4567',
+          language: 'Spanish',
+          priority: 'High',
+          audioResults: audioResults, // Pass the processed audio data
+          transcript: audioResults?.transcript || '',
+          summary: audioResults?.summary || [],
+          target_language: audioResults?.target_language || 'spanish'
+        }
+      }
+    });
   };
 
   // Timer for waiting time
@@ -130,6 +155,68 @@ export const AgentDashboard = () => {
       case 'transferred': return 'bg-warning text-warning-foreground';
       case 'dropped': return 'bg-emergency text-emergency-foreground';
       default: return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  // Audio upload handlers
+  const handleAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    const audioExtensions = ['.mp3', '.wav', '.m4a', '.ogg', '.flac'];
+    const isAudioExtension = audioExtensions.includes(fileExtension);
+    const isAudioMimeType = file.type.startsWith('audio/') || file.type === '';
+    
+    if (!isAudioExtension && !isAudioMimeType) {
+      setAudioError('Invalid file type. Please select MP3, WAV, M4A, OGG, or FLAC');
+      setAudioFile(null);
+      return;
+    }
+
+    // Validate file size (50MB max)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setAudioError('File size must be less than 50MB');
+      setAudioFile(null);
+      return;
+    }
+
+    setAudioFile(file);
+    setAudioError('');
+  };
+
+  const processAudioFile = async () => {
+    if (!audioFile) return;
+
+    setUploadingAudio(true);
+    setAudioError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('audio_file', audioFile);
+      formData.append('target_language', 'spanish'); // Based on incoming call language
+
+      const response = await fetch('http://localhost:8000/process-audio', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setAudioResults(result);
+      
+      // Clear the file after successful processing
+      setAudioFile(null);
+      
+    } catch (error) {
+      setAudioError(`Error processing audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploadingAudio(false);
     }
   };
 
@@ -185,10 +272,65 @@ export const AgentDashboard = () => {
                     </div>
                   </div>
                 </div>
-                <Button onClick={handleAnswerCall} className="bg-active hover:bg-active/90">
-                  <Phone className="w-4 h-4 mr-2" />
-                  Take Over Call
-                </Button>
+                <div className="flex items-center gap-3">
+                  {/* Audio Upload Section */}
+                  <div className="flex flex-col items-center gap-2">
+                    <Input
+                      id="dashboard-audio-file"
+                      type="file"
+                      accept=".mp3,.wav,.m4a,.ogg,.flac,audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/flac"
+                      onChange={handleAudioFileChange}
+                      className="hidden"
+                    />
+                    <label htmlFor="dashboard-audio-file">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="cursor-pointer"
+                        disabled={uploadingAudio}
+                        asChild
+                      >
+                        <span>
+                          {uploadingAudio ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4 mr-2" />
+                              Upload Audio
+                            </>
+                          )}
+                        </span>
+                      </Button>
+                    </label>
+                    {audioFile && (
+                      <Button
+                        onClick={processAudioFile}
+                        size="sm"
+                        disabled={uploadingAudio}
+                        className="text-xs"
+                      >
+                        <FileAudio className="w-3 h-3 mr-1" />
+                        Process
+                      </Button>
+                    )}
+                    {audioError && (
+                      <span className="text-xs text-red-500">{audioError}</span>
+                    )}
+                    {audioResults && (
+                      <div className="text-xs text-green-600 max-w-xs">
+                        ✓ Audio processed successfully
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Button onClick={handleAnswerCall} className="bg-active hover:bg-active/90">
+                    <Phone className="w-4 h-4 mr-2" />
+                    Take Over Call
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
