@@ -1,6 +1,5 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -109,7 +108,7 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
         <h3 className="font-bold text-lg text-foreground">AI Assessment</h3>
       </div>
       
-      <ScrollArea className="flex-1">
+      <div className="flex-1">
         <div className="space-y-4 pr-4">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -166,8 +165,8 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
                 {suggestions.length} available
               </Badge>
             </div>
-            <ScrollArea className="max-h-40">
-              <div className="space-y-2 pr-2">
+            <div className="h-48 overflow-y-scroll border rounded-lg">
+              <div className="p-4 space-y-2">
                 {suggestions.map((suggestion) => (
                   <div
                     key={suggestion.id}
@@ -202,7 +201,7 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
                   </div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         
           <div>
@@ -269,7 +268,7 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
             </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </Card>
   );
 };
