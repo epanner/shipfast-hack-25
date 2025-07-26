@@ -45,7 +45,7 @@ class ChatSession(Base):
     user_agent_id = Column(Integer, ForeignKey("user_agent.id"))
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime, nullable=True)
-    status = Column(String)  # ongoing / completed
+    status = Column(String)  # ongoing / completed / emergency
 
 # ----------------------
 # Table: chat_message
