@@ -39,7 +39,7 @@ export const QuestionSuggestions = ({ questions }: QuestionSuggestionsProps) => 
   const sortedQuestions = [...unansweredQuestions, ...answeredQuestions];
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-card to-card/80 border-2 shadow-xl hover:shadow-2xl transition-all duration-300 animate-fade-in h-full flex flex-col">
+    <Card className="p-6 bg-gradient-to-br from-card to-card/80 border-2 shadow-xl hover:shadow-2xl transition-all duration-300 animate-fade-in h-[calc(100vh-400px)] flex flex-col">
       <div className="flex items-center gap-3 mb-6">
         <HelpCircle className="w-6 h-6 text-primary" />
         <h3 className="font-bold text-lg text-foreground">Question Suggestions</h3>
