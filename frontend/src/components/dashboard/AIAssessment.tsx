@@ -151,7 +151,7 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
                 rows={4}
               />
             ) : (
-              <p className="text-sm text-muted-foreground leading-relaxed bg-muted/20 p-3 rounded-lg">
+              <p className="text-sm text-muted-foreground leading-relaxed bg-muted/20 p-3 rounded-lg max-h-24 overflow-y-auto">
                 {situationSummary}
               </p>
             )}
