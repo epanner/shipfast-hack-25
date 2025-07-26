@@ -39,6 +39,7 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [editedSummary, setEditedSummary] = useState(assessment.summary);
   const [showDispatchDialog, setShowDispatchDialog] = useState(false);
+  const [isRequestSent, setIsRequestSent] = useState(false);
   const { toast } = useToast();
 
   const getDepartmentIcon = (dept: string) => {
@@ -209,8 +210,14 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
               <h4 className="font-semibold text-base text-foreground">Required Departments</h4>
               <Dialog open={showDispatchDialog} onOpenChange={setShowDispatchDialog}>
                 <DialogTrigger asChild>
-                  <Button className="bg-emergency text-emergency-foreground hover:bg-emergency/90 px-4 py-2 text-sm font-medium shadow-lg">
-                    Request
+                  <Button 
+                    className={isRequestSent 
+                      ? "bg-green-600 text-white hover:bg-green-700 px-4 py-2 text-sm font-medium shadow-lg" 
+                      : "bg-emergency text-emergency-foreground hover:bg-emergency/90 px-4 py-2 text-sm font-medium shadow-lg"
+                    }
+                    onClick={() => setIsRequestSent(true)}
+                  >
+                    {isRequestSent ? "Sent" : "Request"}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
