@@ -1,0 +1,11 @@
+# Dependencies
+node_modules
+frontend/node_modules
+yarn.lock
+package-lock.json
+
+# Editor
+.idea
+.vscode
+
+# Build
