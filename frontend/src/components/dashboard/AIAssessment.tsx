@@ -39,6 +39,7 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
   const [editedSummary, setEditedSummary] = useState(assessment.summary);
   const [showDispatchDialog, setShowDispatchDialog] = useState(false);
   const [isRequestSent, setIsRequestSent] = useState(false);
+  const [clickedSuggestions, setClickedSuggestions] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const getDepartmentIcon = (dept: string) => {
@@ -64,6 +65,10 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
     } else {
       setSituationSummary(prev => `${prev}${newContent}`);
     }
+    
+    // Mark suggestion as clicked
+    setClickedSuggestions(prev => new Set([...prev, suggestion.id]));
+    
     toast({
       description: "Suggestion added to situation summary",
       duration: 2000,
@@ -167,39 +172,58 @@ export const AIAssessment = ({ assessment, suggestions }: AIAssessmentProps) => 
             </div>
             <div className="h-48 overflow-y-scroll border rounded-lg">
               <div className="p-4 space-y-2">
-                {suggestions.map((suggestion) => (
-                  <div
-                    key={suggestion.id}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="group p-3 border rounded-xl bg-gradient-to-r from-card to-card/90 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50 transition-all duration-300 cursor-pointer relative overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="relative">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={`p-1.5 rounded-lg ${
-                          suggestion.priority === 'high' ? 'bg-emergency/20' :
-                          suggestion.priority === 'medium' ? 'bg-warning/20' : 'bg-info/20'
-                        }`}>
-                          <div className={`${getPriorityColor(suggestion.priority)}`}>
-                            {getTypeIcon(suggestion.type)}
+                {suggestions
+                  .sort((a, b) => {
+                    const aClicked = clickedSuggestions.has(a.id);
+                    const bClicked = clickedSuggestions.has(b.id);
+                    if (aClicked && !bClicked) return 1;
+                    if (!aClicked && bClicked) return -1;
+                    return 0;
+                  })
+                  .map((suggestion) => {
+                    const isClicked = clickedSuggestions.has(suggestion.id);
+                    return (
+                      <div
+                        key={suggestion.id}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className={`group border rounded-xl transition-all duration-300 cursor-pointer relative overflow-hidden ${
+                          isClicked 
+                            ? 'p-2 bg-gradient-to-r from-green-50 to-green-100 hover:shadow-md border-green-200 scale-95' 
+                            : 'p-3 bg-gradient-to-r from-card to-card/90 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50'
+                        }`}
+                      >
+                        <div className={`absolute inset-0 transition-opacity duration-300 ${
+                          isClicked 
+                            ? 'bg-gradient-to-r from-green-100/50 to-transparent opacity-100' 
+                            : 'bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100'
+                        }`} />
+                        <div className="relative">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`p-1.5 rounded-lg ${
+                              suggestion.priority === 'high' ? 'bg-emergency/20' :
+                              suggestion.priority === 'medium' ? 'bg-warning/20' : 'bg-info/20'
+                            }`}>
+                              <div className={`${getPriorityColor(suggestion.priority)}`}>
+                                {getTypeIcon(suggestion.type)}
+                              </div>
+                            </div>
+                            <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{suggestion.title}</span>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ml-auto ${getPriorityColor(suggestion.priority)} border-current`}
+                            >
+                              {suggestion.priority}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">{suggestion.content}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="text-xs text-muted-foreground">Confidence: {suggestion.confidence}%</div>
+                            <div className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">Click to add →</div>
                           </div>
                         </div>
-                        <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{suggestion.title}</span>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs ml-auto ${getPriorityColor(suggestion.priority)} border-current`}
-                        >
-                          {suggestion.priority}
-                        </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{suggestion.content}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="text-xs text-muted-foreground">Confidence: {suggestion.confidence}%</div>
-                        <div className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">Click to add →</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
               </div>
             </div>
           </div>
