@@ -1,4 +1,4 @@
-# 🚨 sosAI - AI-powered real-time emergency call assistant**
+# 🚨 sosAI - AI-powered Real-Time Emergency Call Assistant
 
 `sosAI` enhances emergency call handling by leveraging AI to **transcribe, analyze, and assist dispatchers in real time**. It provides live translations, AI-generated response suggestions, and smart question prompts—helping emergency services respond faster and more accurately.
 
