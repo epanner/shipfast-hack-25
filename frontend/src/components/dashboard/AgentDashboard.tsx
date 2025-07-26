@@ -237,12 +237,12 @@ export const AgentDashboard = () => {
         </div>
 
         {/* Previous Calls */}
-        <Card className="mt-6">
+        <Card className="mt-6 flex-1 flex flex-col">
           <CardHeader>
             <CardTitle>Recent Calls</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[400px]">
+          <CardContent className="flex-1">
+            <ScrollArea className="h-full">
               <div className="space-y-3">
                 {previousCalls.map((call) => (
                   <div
