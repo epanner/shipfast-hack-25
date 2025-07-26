@@ -169,7 +169,7 @@ export const AIAssessment = ({ assessment, suggestions, aiRecommendations, loadi
           <div>
             <div className="flex items-center gap-3 mb-3">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h4 className="font-semibold text-base text-foreground">Suggested Additions to Summary</h4>
+              <h4 className="font-semibold text-base text-foreground">Additions to Summary</h4>
               {loadingRecommendations ? (
                 <div className="ml-auto text-xs text-muted-foreground">Analyzing audio...</div>
               ) : (
