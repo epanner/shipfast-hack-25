@@ -12,7 +12,7 @@ services:
       - DATABASE_URL=sqlite:///emergency_call.db
     volumes:
       - ./uploads:/app/uploads
-      - ./emergency-call-backend/emergency_call.db:/app/emergency_call.db
+      - ./backend/emergency_call.db:/app/emergency_call.db
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
