@@ -1,16 +1,28 @@
 // API Configuration for different environments
 const isDevelopment = import.meta.env.DEV;
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const isDocker = window.location.port === '3100';
 
-export const API_BASE_URL = isDocker 
-  ? 'http://localhost:8100'  // Docker port mapping
-  : 'http://localhost:8000'; // Development port
+// Determine the API base URL based on environment
+export const API_BASE_URL = (() => {
+  if (isLocalhost && isDocker) {
+    // Local Docker environment
+    return 'http://localhost:8100';
+  } else if (isLocalhost) {
+    // Local development environment
+    return 'http://localhost:8000';
+  } else {
+    // Production environment (Hetzner server with subdomains)
+    return 'https://api-shipfast2025.naurzalinov.me';
+  }
+})();
 
+// Define endpoints as relative paths
 export const API_ENDPOINTS = {
-  PROCESS_AUDIO: `${API_BASE_URL}/process-audio`,
-  GENERATE_RECOMMENDATIONS: `${API_BASE_URL}/generate-recommendations`,
-  GENERATE_AGENT_SUGGESTIONS: `${API_BASE_URL}/generate-agent-suggestions`,
-  HEALTH: `${API_BASE_URL}/health`,
+  PROCESS_AUDIO: '/process-audio',
+  GENERATE_RECOMMENDATIONS: '/generate-recommendations',
+  GENERATE_AGENT_SUGGESTIONS: '/generate-agent-suggestions',
+  HEALTH: '/health',
 } as const;
 
 // Helper function to build API URLs
