@@ -94,6 +94,31 @@ app.add_middleware(
 def read_root():
     return {"message": "Emergency Call Backend is running", "status": "ok"}
 
+# Health check endpoint for monitoring
+@app.get("/health")
+def health_check():
+    """Health check endpoint for load balancers and monitoring"""
+    try:
+        # Test database connection
+        db = next(get_db())
+        db.execute("SELECT 1")
+        db_status = "healthy"
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+    
+    # Test Claude API availability
+    claude_status = "healthy" if CLAUDE_API_KEY else "missing_api_key"
+    
+    return {
+        "status": "healthy" if db_status == "healthy" and claude_status == "healthy" else "unhealthy",
+        "timestamp": datetime.now().isoformat(),
+        "services": {
+            "database": db_status,
+            "claude_api": claude_status,
+            "whisper": "available"
+        }
+    }
+
 # -------- Dependency --------
 def get_db():
     db = SessionLocal()
