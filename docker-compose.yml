@@ -1,12 +1,16 @@
 version: '3.8'
 
+networks:
+  emergency-call-network:
+    driver: bridge
+
 services:
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "8000:8000"
+      - "8100:8000"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - DATABASE_URL=sqlite:///emergency_call.db
@@ -14,6 +18,8 @@ services:
       - ./uploads:/app/uploads
       - ./backend/emergency_call.db:/app/emergency_call.db
     restart: unless-stopped
+    networks:
+      - emergency-call-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -25,10 +31,12 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "80:80"
+      - "3100:80"
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - emergency-call-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
@@ -39,7 +47,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "443:443"
+      - "8443:443"
     volumes:
       - ./nginx-prod.conf:/etc/nginx/nginx.conf
       - ./ssl:/etc/nginx/ssl
@@ -47,5 +55,7 @@ services:
       - frontend
       - backend
     restart: unless-stopped
+    networks:
+      - emergency-call-network
     profiles:
       - production
