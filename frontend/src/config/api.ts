@@ -13,7 +13,8 @@ export const API_BASE_URL = (() => {
     return 'http://localhost:8000';
   } else {
     // Production environment (Hetzner server with subdomains)
-    return 'https://api-shipfast2025.naurzalinov.me';
+    // Using HTTP since SSL is not configured for API subdomain
+    return 'http://api-shipfast2025.naurzalinov.me';
   }
 })();
 
