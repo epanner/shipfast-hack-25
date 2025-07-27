@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
+import { API_ENDPOINTS, buildApiUrl } from "@/config/api";
 import { 
   Phone, 
   PhoneCall, 
@@ -168,7 +169,7 @@ const EmergencyCallModal: React.FC<EmergencyCallModalProps> = ({ isOpen, onClose
       formData.append('audio_file', audioFile);
       formData.append('target_language', callData?.target_language || 'french');
 
-      const response = await fetch('http://localhost:8000/process-audio', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.PROCESS_AUDIO), {
         method: 'POST',
         body: formData,
       });
@@ -197,7 +198,7 @@ const EmergencyCallModal: React.FC<EmergencyCallModalProps> = ({ isOpen, onClose
     setLoadingRecommendations(true);
     
     try {
-      const response = await fetch('http://localhost:8000/generate-recommendations', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.GENERATE_RECOMMENDATIONS), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

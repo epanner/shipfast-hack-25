@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, Mic, FileAudio, Globe, MessageSquare, Phone } from 'lucide-react';
 import EmergencyCallModal from '@/components/EmergencyCallModal';
+import { API_BASE_URL, buildApiUrl } from "@/config/api";
 
 const AudioTest = () => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -20,7 +21,7 @@ const AudioTest = () => {
   const [showCallModal, setShowCallModal] = useState<boolean>(false);
   const [callData, setCallData] = useState<any>(null);
 
-  const API_BASE = 'https://api-shipfast2025.naurzalinov.me';
+  const API_BASE = API_BASE_URL;
   
   // Debug: Log when component mounts
   React.useEffect(() => {
@@ -465,7 +466,7 @@ const AudioTest = () => {
       <div className="mt-8 p-4 bg-gray-50 rounded-md">
         <h3 className="font-semibold mb-2">Backend Status</h3>
         <p className="text-sm text-gray-600">
-          Make sure your backend is running at: <code className="bg-white px-1 rounded">http://localhost:8000</code>
+          Make sure your backend is running at: <code className="bg-white px-1 rounded">{API_BASE}</code>
         </p>
         <p className="text-sm text-gray-600 mt-1">
           Start with: <code className="bg-white px-1 rounded">cd emergency-call-backend && python main.py</code>

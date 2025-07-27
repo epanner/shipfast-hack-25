@@ -19,6 +19,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { API_ENDPOINTS, buildApiUrl } from "@/config/api";
 
 interface CallRecord {
   id: string;
@@ -198,7 +199,7 @@ export const AgentDashboard = () => {
       formData.append('audio_file', audioFile);
       formData.append('target_language', 'spanish'); // Based on incoming call language
 
-      const response = await fetch('http://localhost:8000/process-audio', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.PROCESS_AUDIO), {
         method: 'POST',
         body: formData,
       });

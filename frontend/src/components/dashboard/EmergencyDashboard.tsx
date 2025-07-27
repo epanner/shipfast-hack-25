@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { API_ENDPOINTS, buildApiUrl } from "@/config/api";
 
 // Mock data types
 interface TranscriptMessage {
@@ -196,7 +197,7 @@ export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps)
     setLoadingRecommendations(true);
     
     try {
-      const response = await fetch('http://localhost:8000/generate-recommendations', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.GENERATE_RECOMMENDATIONS), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -248,7 +249,7 @@ export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps)
     setLoadingAgentSuggestions(true);
     
     try {
-      const response = await fetch('http://localhost:8000/generate-agent-suggestions', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.GENERATE_AGENT_SUGGESTIONS), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
