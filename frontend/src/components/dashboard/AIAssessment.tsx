@@ -179,64 +179,56 @@ export const AIAssessment = ({ assessment, suggestions, aiRecommendations, loadi
                 <div className="ml-auto text-xs text-muted-foreground">Analyzing audio...</div>
               ) : (
                 <Badge variant="secondary" className="ml-auto bg-primary/10 text-primary border-primary/30 text-xs">
-                  {aiRecommendations?.length || 0} suggestions
+                  {aiRecommendations?.length || 0} additions
                 </Badge>
               )}
             </div>
             <div className="h-48 overflow-y-scroll border rounded-lg">
               <div className="p-4 space-y-2">
-                {suggestions
-                  .sort((a, b) => {
-                    const aClicked = clickedSuggestions.has(a.id);
-                    const bClicked = clickedSuggestions.has(b.id);
-                    if (aClicked && !bClicked) return 1;
-                    if (!aClicked && bClicked) return -1;
-                    return 0;
-                  })
-                  .map((suggestion) => {
-                    const isClicked = clickedSuggestions.has(suggestion.id);
-                    return (
+                {(aiRecommendations || []).length > 0 ? (
+                  (aiRecommendations || [])
+                    .map((recommendation, index) => (
                       <div
-                        key={suggestion.id}
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        className={`group border rounded-xl transition-all duration-300 cursor-pointer relative overflow-hidden ${
-                          isClicked 
-                            ? 'p-2 bg-gradient-to-r from-green-50 to-green-100 hover:shadow-md border-green-200 scale-95' 
-                            : 'p-3 bg-gradient-to-r from-card to-card/90 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50'
-                        }`}
+                        key={recommendation.id || index}
+                        className="p-3 bg-gradient-to-r from-card to-card/90 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50 rounded-lg border transition-all duration-200"
                       >
-                        <div className={`absolute inset-0 transition-opacity duration-300 ${
-                          isClicked 
-                            ? 'bg-gradient-to-r from-green-100/50 to-transparent opacity-100' 
-                            : 'bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100'
-                        }`} />
-                        <div className="relative">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className={`p-1.5 rounded-lg ${
-                              suggestion.priority === 'high' ? 'bg-emergency/20' :
-                              suggestion.priority === 'medium' ? 'bg-warning/20' : 'bg-info/20'
-                            }`}>
-                              <div className={`${getPriorityColor(suggestion.priority)}`}>
-                                {getTypeIcon(suggestion.type)}
-                              </div>
-                            </div>
-                            <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{suggestion.title}</span>
-                            <Badge 
-                              variant="outline" 
-                              className={`text-xs ml-auto ${getPriorityColor(suggestion.priority)} border-current`}
-                            >
-                              {suggestion.priority}
-                            </Badge>
+                        <div className="flex items-start gap-3">
+                          <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                            recommendation.priority === 'high' ? 'bg-red-100 text-red-600' :
+                            recommendation.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' : 
+                            'bg-blue-100 text-blue-600'
+                          }`}>
+                            <div className="w-2 h-2 rounded-full bg-current"></div>
                           </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">{suggestion.content}</p>
-                          <div className="flex items-center justify-between mt-2">
-                            <div className="text-xs text-muted-foreground">Confidence: {suggestion.confidence}%</div>
-                            <div className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">Click to add →</div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h5 className="font-semibold text-sm text-foreground">{recommendation.title}</h5>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  recommendation.priority === 'high' ? 'border-red-200 text-red-600' :
+                                  recommendation.priority === 'medium' ? 'border-yellow-200 text-yellow-600' : 
+                                  'border-blue-200 text-blue-600'
+                                }`}
+                              >
+                                {recommendation.priority}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed mb-2">{recommendation.content}</p>
+                            <div className="text-xs text-muted-foreground">
+                              Confidence: {recommendation.confidence}%
+                            </div>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
+                    ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-32 text-center">
+                    <FileText className="w-8 h-8 text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground">No summary additions available</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Upload audio to generate AI recommendations</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
