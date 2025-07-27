@@ -29,7 +29,7 @@ interface Suggestion {
 
 interface Question {
   id: string;
-  category: 'location' | 'medical' | 'safety' | 'details';
+  category: 'location' | 'medical' | 'safety' | 'details' | 'reassurance';
   question: string;
   priority: number;
   reasoning: string;
@@ -45,36 +45,62 @@ interface Assessment {
   confidence: number;
 }
 
-export const EmergencyDashboard = () => {
+interface CallData {
+  phoneNumber: string;
+  language: string;
+  priority: string;
+  audioResults?: any;
+  transcript: string;
+  summary: string[];
+  target_language: string;
+}
+
+interface EmergencyDashboardProps {
+  initialCallData?: CallData;
+}
+
+export const EmergencyDashboard = ({ initialCallData }: EmergencyDashboardProps) => {
   const navigate = useNavigate();
   const [callDuration, setCallDuration] = useState("00:00:00");
   const [isCallActive, setIsCallActive] = useState(true);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('high');
   const [systemStatus, setSystemStatus] = useState<'online' | 'offline'>('online');
-  const [messages, setMessages] = useState<TranscriptMessage[]>([
-    {
-      id: "1",
-      speaker: "caller",
-      message: "Help! There's been an accident on Highway 95, near Exit 12. A car has flipped over and there are people trapped inside!",
-      originalLanguage: "Spanish",
-      timestamp: "14:23:01",
-      isTranslated: true
-    },
-    {
-      id: "2",
-      speaker: "ai-agent",
-      message: "I understand there's been an accident. Can you tell me how many vehicles are involved and if anyone appears to be seriously injured?",
-      timestamp: "14:23:15"
-    },
-    {
-      id: "3",
-      speaker: "caller",
-      message: "It's just one car, but I can see at least two people inside. One person is moving but the other isn't responding. There's smoke coming from the engine.",
-      originalLanguage: "Spanish",
-      timestamp: "14:23:28",
-      isTranslated: true
+  
+  // Debug logging
+  console.log('EmergencyDashboard - initialCallData:', initialCallData);
+
+  // AI recommendations state
+  const [aiRecommendations, setAiRecommendations] = useState<Suggestion[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
+  // Agent communication suggestions state
+  const [agentSuggestions, setAgentSuggestions] = useState<Question[]>([]);
+  const [loadingAgentSuggestions, setLoadingAgentSuggestions] = useState(false);
+
+  // Initialize messages with audio transcript if available
+  const [messages, setMessages] = useState<TranscriptMessage[]>(() => {
+    const defaultMessages: TranscriptMessage[] = [];
+
+    // If we have audio transcript, add it as the most recent message
+    if (initialCallData?.transcript) {
+      console.log('Adding audio transcript:', initialCallData.transcript);
+      const audioMessage: TranscriptMessage = {
+        id: "audio-upload",
+        speaker: "caller",
+        message: `🎵 UPLOADED AUDIO: ${initialCallData.transcript}`,
+        originalLanguage: initialCallData.target_language,
+        timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+        isTranslated: initialCallData.target_language !== 'english'
+      };
+      
+      const finalMessages = [...defaultMessages, audioMessage];
+      console.log('Final messages array:', finalMessages);
+      return finalMessages;
     }
-  ]);
+
+    console.log('No audio transcript found, using default messages');
+    return defaultMessages;
+  });
 
   const [suggestions] = useState<Suggestion[]>([
     {
@@ -134,15 +160,139 @@ export const EmergencyDashboard = () => {
     }
   ]);
 
-  const [assessment] = useState<Assessment>({
-    summary: "Single vehicle rollover accident on Highway 95 near Exit 12. Two occupants trapped inside with one unresponsive. Vehicle shows signs of potential fire hazard with smoke from engine compartment. Immediate multi-department response required.",
-    departments: {
-      police: true,
-      fire: true,
-      ambulance: true
-    },
-    confidence: 94
+  const [assessment] = useState<Assessment>(() => {
+    const defaultAssessment = {
+      summary: ".",
+      departments: {
+        police: true,
+        fire: true,
+        ambulance: true
+      },
+      confidence: 94
+    };
+
+    // If we have audio summary, combine it with the default assessment
+    if (initialCallData?.summary && initialCallData.summary.length > 0) {
+      const audioSummary = initialCallData.summary.join(' ');
+      return {
+        ...defaultAssessment,
+        summary: `${defaultAssessment.summary}\n\n UPLOADED AUDIO ANALYSIS: ${audioSummary}`,
+        confidence: 96 // Higher confidence with additional audio data
+      };
+    }
+
+    return defaultAssessment;
   });
+
+  // Fetch AI recommendations when audio data is available
+  useEffect(() => {
+    if (initialCallData?.transcript && initialCallData?.summary) {
+      fetchAIRecommendations(initialCallData.transcript, initialCallData.summary);
+      fetchAgentSuggestions(initialCallData.transcript, initialCallData.summary);
+    }
+  }, [initialCallData]);
+
+  const fetchAIRecommendations = async (transcript: string, summary: string[]) => {
+    setLoadingRecommendations(true);
+    
+    try {
+      const response = await fetch('http://localhost:8000/generate-recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transcript: transcript,
+          summary: summary,
+          target_language: 'english'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Convert backend recommendations to frontend Suggestion format
+      const formattedRecommendations: Suggestion[] = result.recommendations.map((rec: any) => ({
+        id: rec.id,
+        type: rec.type as 'advice' | 'warning' | 'protocol',
+        priority: rec.priority as 'high' | 'medium' | 'low',
+        title: rec.title,
+        content: rec.content,
+        confidence: rec.confidence
+      }));
+      
+      setAiRecommendations(formattedRecommendations);
+      
+    } catch (error) {
+      console.error('Error fetching AI recommendations:', error);
+      // Set fallback recommendations
+      setAiRecommendations([
+        {
+          id: 'fallback-1',
+          type: 'advice',
+          priority: 'high',
+          title: 'Scene Assessment',
+          content: 'Conduct thorough scene safety assessment before approaching.',
+          confidence: 85
+        }
+      ]);
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+
+  const fetchAgentSuggestions = async (transcript: string, summary: string[]) => {
+    setLoadingAgentSuggestions(true);
+    
+    try {
+      const response = await fetch('http://localhost:8000/generate-agent-suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transcript: transcript,
+          summary: summary,
+          target_language: 'english'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Convert backend suggestions to frontend Question format
+      const formattedSuggestions: Question[] = result.suggestions.map((suggestion: any) => ({
+        id: suggestion.id,
+        category: suggestion.category as 'location' | 'medical' | 'safety' | 'details' | 'reassurance',
+        question: suggestion.suggestion, // Backend uses 'suggestion' field
+        priority: suggestion.priority,
+        reasoning: suggestion.reasoning
+      }));
+      
+      setAgentSuggestions(formattedSuggestions);
+      
+    } catch (error) {
+      console.error('Error fetching agent suggestions:', error);
+      // Set fallback suggestions
+      setAgentSuggestions([
+        {
+          id: 'fallback-1',
+          category: 'safety',
+          question: 'Is the caller in a safe location?',
+          priority: 10,
+          reasoning: 'Caller safety is priority with potential vehicle fire'
+        }
+      ]);
+    } finally {
+      setLoadingAgentSuggestions(false);
+    }
+  };
 
   // Simulate call duration
   useEffect(() => {
@@ -252,7 +402,7 @@ export const EmergencyDashboard = () => {
               />
             </div>
             <div className="flex-1 min-h-0">
-              <QuestionSuggestions questions={questions} />
+              <QuestionSuggestions questions={agentSuggestions} />
             </div>
           </div>
 
@@ -266,7 +416,12 @@ export const EmergencyDashboard = () => {
 
           {/* Right Column - AI Assessment with Suggestions */}
           <div className="lg:col-span-2 min-h-0 max-h-screen">
-            <AIAssessment assessment={assessment} suggestions={suggestions} />
+            <AIAssessment 
+              assessment={assessment} 
+              suggestions={[]} 
+              aiRecommendations={aiRecommendations} 
+              loadingRecommendations={loadingRecommendations} 
+            />
           </div>
         </div>
       </div>
