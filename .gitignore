@@ -8,5 +8,9 @@ package-lock.json
 .idea
 .vscode
 .env
+<<<<<<< HEAD
 .venv
+=======
+.DS_Store
+>>>>>>> 89b8f8b (.gitignore update)
 # Build
