@@ -8,4 +8,5 @@ package-lock.json
 .idea
 .vscode
 .env
+.venv
 # Build
