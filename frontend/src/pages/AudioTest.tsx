@@ -20,7 +20,7 @@ const AudioTest = () => {
   const [showCallModal, setShowCallModal] = useState<boolean>(false);
   const [callData, setCallData] = useState<any>(null);
 
-  const API_BASE = 'http://localhost:8000';
+  const API_BASE = 'https://api-shipfast2025.naurzalinov.me';
   
   // Debug: Log when component mounts
   React.useEffect(() => {
